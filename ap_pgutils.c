@@ -301,32 +301,39 @@ extern Datum pg_b32_encode(PG_FUNCTION_ARGS)
   bytea *raw = PG_GETARG_BYTEA_P(0);
   int rawlen = VARSIZE(raw) - VARHDRSZ;
   text *out;
-  int i, j, outlen, bits;
-  unsigned int accum;
+  int outlen, count, buffer, next, bits_left, index, pad;
   unsigned char *rawdata = (unsigned char *) VARDATA(raw);
 
   outlen = (8 * rawlen) / 5 + (((8 * rawlen) % 5) ? 1 : 0);
   out = palloc(VARHDRSZ + outlen);
   SET_VARSIZE(out, VARHDRSZ + outlen);
-  
-  /* encode in chunks of up to 8 bytes */
-  accum = 0;
-  j = 0;
-  for (i=0; i<rawlen; i++) {
-    accum = (accum << 8) | rawdata[i];
-    bits += 8;
-    while (bits >= 5) {
-      unsigned int b = accum & (0x1f << (bits - 5));
-      accum ^= b;
-      b >>= bits - 5;
-      VARDATA(out)[j++] = b32_table[b];
-      bits -= 5;
+
+  count = 0;
+  buffer = rawdata[0];
+  next = 1;
+  bits_left = 8;
+  while(count < outlen && (bits_left > 0 || next < rawlen)) {
+    if(bits_left < 5) {
+      if(next < rawlen) {
+        buffer <<= 8;
+        buffer |= rawdata[next++] & 0xff;
+        bits_left += 8;
+      } else {
+        pad = 5 - bits_left;
+        buffer <<= pad;
+        bits_left += pad;
+      }
     }
+    index = 0x1f & (buffer >> (bits_left - 5));
+    bits_left -= 5;
+    VARDATA(out)[count++] = b32_table[index];
   }
-  if (bits) {
-    accum <<= 5 - bits;
-    VARDATA(out)[j++] = b32_table[accum & 0x20];
+  if(count < outlen) {
+    VARDATA(out)[count] = '\000';
   }
-  
+
   return (Datum) out;
 }
+
+
+
