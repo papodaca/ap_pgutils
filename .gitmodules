@@ -1,0 +1,4 @@
+[submodule "argon2"]
+	path = argon2
+	url = https://github.com/Apsalar/phc-winner-argon2
+	branch = nothreads
