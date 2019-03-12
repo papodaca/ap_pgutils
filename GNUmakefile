@@ -21,12 +21,9 @@ include $(PGXS)
 
 ap_pgutils.o:: argon2/libargon2.a
 
-argon2:
-	git clone -b nothreads https://github.com/Apsalar/phc-winner-argon2 argon2
-
 ARGON_CFLAGS=	-fPIC -D_REENTRANT \
 		-std=c89 -pthread $(COMMON_CPPFLAGS) -Wall -Iinclude -Isrc
-argon2/libargon2.a: argon2
+argon2/libargon2.a:
 	(cd argon2; $(MAKE) CC=gcc LIB_EXT=a CFLAGS="$(ARGON_CFLAGS)" libargon2.a)
 
 PGT=	|$(PG_BIN) --single -D testdata postgres
